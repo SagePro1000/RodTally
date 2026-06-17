@@ -6,7 +6,8 @@ const STORAGE_KEY = 'rodtally_session';
 const DEFAULTS = {
   selectedMaterial: '12mm',
   saleType: 'wholesale',
-  bundleCount: 0,
+  pieceCount: 0,
+  incrementHistory: [],
   countMode: 'free',
   targetType: 'tons',
   targetValue: 1,
@@ -18,15 +19,27 @@ function loadSession() {
     if (!raw) return DEFAULTS;
 
     const data = JSON.parse(raw);
+    const selectedMaterial = MATERIAL_SIZES.includes(data.selectedMaterial)
+      ? data.selectedMaterial
+      : DEFAULTS.selectedMaterial;
+    const material = MATERIALS[selectedMaterial];
+
+    let pieceCount = DEFAULTS.pieceCount;
+    if (Number.isInteger(data.pieceCount) && data.pieceCount >= 0) {
+      pieceCount = data.pieceCount;
+    } else if (Number.isInteger(data.bundleCount) && data.bundleCount >= 0) {
+      pieceCount = data.bundleCount * material.pcsPerBundle;
+    }
+
+    const incrementHistory = Array.isArray(data.incrementHistory)
+      ? data.incrementHistory.filter((n) => Number.isInteger(n) && n > 0)
+      : [];
+
     return {
-      selectedMaterial: MATERIAL_SIZES.includes(data.selectedMaterial)
-        ? data.selectedMaterial
-        : DEFAULTS.selectedMaterial,
+      selectedMaterial,
       saleType: data.saleType === 'retail' ? 'retail' : 'wholesale',
-      bundleCount:
-        Number.isInteger(data.bundleCount) && data.bundleCount >= 0
-          ? data.bundleCount
-          : DEFAULTS.bundleCount,
+      pieceCount,
+      incrementHistory,
       countMode: data.countMode === 'target' ? 'target' : 'free',
       targetType: data.targetType === 'pieces' ? 'pieces' : 'tons',
       targetValue:
@@ -47,56 +60,100 @@ function saveSession(session) {
   }
 }
 
+function targetPiecesFor(material, saleType, targetValue) {
+  return Math.round(targetValue * material.pcsPerTon[saleType]);
+}
+
 export function useSession(addSession) {
   const initial = loadSession();
   const [selectedMaterial, setSelectedMaterial] = useState(initial.selectedMaterial);
   const [saleType, setSaleType] = useState(initial.saleType);
-  const [bundleCount, setBundleCount] = useState(initial.bundleCount);
+  const [pieceCount, setPieceCount] = useState(initial.pieceCount);
+  const [incrementHistory, setIncrementHistory] = useState(initial.incrementHistory ?? []);
   const [countMode, setCountMode] = useState(initial.countMode);
   const [targetType, setTargetType] = useState(initial.targetType);
   const [targetValue, setTargetValue] = useState(initial.targetValue);
+
+  const material = MATERIALS[selectedMaterial];
+  const pieces = pieceCount;
+  const fullBundles = Math.floor(pieceCount / material.pcsPerBundle);
+  const partialPieces = pieceCount % material.pcsPerBundle;
+  
+  const targetPieces = countMode === 'target' && targetType === 'tons' 
+    ? targetPiecesFor(material, saleType, targetValue) 
+    : 0;
+
+  let displayTons = (pieces / material.pcsPerTon[saleType]).toFixed(2);
+  if (countMode === 'target' && targetType === 'tons' && pieces === targetPieces) {
+    displayTons = parseFloat(targetValue).toFixed(2);
+  }
+
+  const tons = displayTons;
+  const countingPieces = countMode === 'target' && targetType === 'pieces';
+  const bundleOnly = countMode === 'target' && targetType === 'tons';
+
+  const targetReached =
+    countMode === 'target' &&
+    (targetType === 'pieces'
+      ? pieces >= targetValue
+      : pieces >= targetPiecesFor(material, saleType, targetValue));
 
   useEffect(() => {
     saveSession({
       selectedMaterial,
       saleType,
-      bundleCount,
+      pieceCount,
+      incrementHistory,
       countMode,
       targetType,
       targetValue,
     });
-  }, [selectedMaterial, saleType, bundleCount, countMode, targetType, targetValue]);
+  }, [selectedMaterial, saleType, pieceCount, incrementHistory, countMode, targetType, targetValue]);
 
-  const material = MATERIALS[selectedMaterial];
-  const pieces = bundleCount * material.pcsPerBundle;
-  const tons = (pieces / material.pcsPerTon[saleType]).toFixed(2);
-
-  const targetReached = countMode === 'target' && (
-    targetType === 'pieces' ? pieces >= targetValue : parseFloat(tons) >= targetValue
-  );
-
-  function countBundle() {
+  function count(unit = 'bundle') {
     if (targetReached) return;
-    setBundleCount(prev => prev + 1);
+
+    const effectiveUnit = countingPieces ? 'piece' : unit;
+    let increment = effectiveUnit === 'piece' ? 1 : material.pcsPerBundle;
+
+    if (countMode === 'target') {
+      const targetPcs = targetType === 'pieces' 
+        ? targetValue 
+        : targetPiecesFor(material, saleType, targetValue);
+      
+      const remaining = targetPcs - pieceCount;
+      increment = Math.min(increment, remaining);
+    }
+
+    if (increment <= 0) return;
+    setPieceCount((prev) => prev + increment);
+    setIncrementHistory((prev) => [...prev, increment]);
   }
 
   function undo() {
-    setBundleCount(prev => Math.max(0, prev - 1));
+    setIncrementHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setPieceCount((count) => Math.max(0, count - last));
+      return prev.slice(0, -1);
+    });
   }
 
   function reset() {
-    if (bundleCount > 0) {
+    if (pieceCount > 0) {
       addSession({
         timestamp: new Date().toISOString(),
         material: selectedMaterial,
         saleType,
-        bundles: bundleCount,
+        bundles: fullBundles,
+        partialPieces,
         pieces,
         tons,
         targetReached: countMode === 'target' ? targetReached : undefined,
       });
     }
-    setBundleCount(0);
+    setPieceCount(0);
+    setIncrementHistory([]);
   }
 
   return {
@@ -104,9 +161,13 @@ export function useSession(addSession) {
     setSelectedMaterial,
     saleType,
     setSaleType,
-    bundleCount,
+    pieceCount,
+    fullBundles,
+    partialPieces,
     pieces,
     tons,
+    countingPieces,
+    bundleOnly,
     countMode,
     setCountMode,
     targetType,
@@ -114,8 +175,9 @@ export function useSession(addSession) {
     targetValue,
     setTargetValue,
     targetReached,
-    countBundle,
+    countBundle: count,
     undo,
     reset,
+    hasCount: (incrementHistory ?? []).length > 0,
   };
 }

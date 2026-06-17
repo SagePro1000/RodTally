@@ -42,25 +42,29 @@ function TallyGroup({ count }) {
   );
 }
 
-export default function TallyBoard({ bundleCount }) {
-  if (bundleCount === 0) {
+export default function TallyBoard({ fullBundles, countingPieces }) {
+  const emptyHint = countingPieces
+    ? 'Tap Count Piece to start tallying…'
+    : 'Tap Count Bundle to start tallying…';
+
+  if (fullBundles === 0) {
     return (
       <div className="tally-section">
         <div className="tally-section-label">Tally</div>
         <div className="tally-board">
-          <span className="tally-empty">Tap Count Bundle to start tallying…</span>
+          <span className="tally-empty">{emptyHint}</span>
         </div>
       </div>
     );
   }
 
-  const fullGroups = Math.floor(bundleCount / 5);
-  const remainder = bundleCount % 5;
+  const fullGroups = Math.floor(fullBundles / 5);
+  const remainder = fullBundles % 5;
 
   return (
     <div className="tally-section">
       <div className="tally-section-label">Tally</div>
-      <div className="tally-board" role="img" aria-label={`${bundleCount} bundles tallied`}>
+      <div className="tally-board" role="img" aria-label={`${fullBundles} bundles tallied`}>
         {Array.from({ length: fullGroups }).map((_, i) => (
           <TallyGroup key={i} count={5} />
         ))}

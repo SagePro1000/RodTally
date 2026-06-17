@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 
-export default function ControlButtons({ bundleCount, tons, onUndo, onReset }) {
+export default function ControlButtons({ hasCount, pieces, tons, onUndo, onReset }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   function handleResetClick() {
-    if (bundleCount === 0) return;
+    if (!hasCount) return;
     setShowConfirm(true);
   }
 
@@ -25,8 +25,8 @@ export default function ControlButtons({ bundleCount, tons, onUndo, onReset }) {
           id="undo-btn"
           className="ctrl-btn"
           onClick={onUndo}
-          disabled={bundleCount === 0}
-          aria-label="Undo last bundle"
+          disabled={!hasCount}
+          aria-label="Undo last count"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="9 14 4 9 9 4" />
@@ -38,7 +38,7 @@ export default function ControlButtons({ bundleCount, tons, onUndo, onReset }) {
           id="reset-btn"
           className="ctrl-btn danger"
           onClick={handleResetClick}
-          disabled={bundleCount === 0}
+          disabled={!hasCount}
           aria-label="Reset session"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -51,7 +51,7 @@ export default function ControlButtons({ bundleCount, tons, onUndo, onReset }) {
 
       <ConfirmDialog
         open={showConfirm}
-        bundleCount={bundleCount}
+        pieces={pieces}
         tons={tons}
         onConfirm={handleConfirm}
         onCancel={handleCancel}

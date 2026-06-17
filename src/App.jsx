@@ -52,7 +52,9 @@ export default function App() {
 
         {/* Stats Zone */}
         <StatsCards
-          bundleCount={session.bundleCount}
+          countingPieces={session.countingPieces}
+          fullBundles={session.fullBundles}
+          partialPieces={session.partialPieces}
           pieces={session.pieces}
           tons={session.tons}
         />
@@ -75,17 +77,23 @@ export default function App() {
         />
 
         {/* Tally Zone */}
-        <TallyBoard bundleCount={session.bundleCount} />
+        <TallyBoard
+          fullBundles={session.fullBundles}
+          countingPieces={session.countingPieces}
+        />
 
         {/* Action Zone */}
-        <ActionButton 
-          onCount={session.countBundle} 
+        <ActionButton
+          onCount={session.countBundle}
           reached={session.targetReached}
+          countingPieces={session.countingPieces}
+          bundleOnly={session.bundleOnly}
         />
 
         {/* Control Zone */}
         <ControlButtons
-          bundleCount={session.bundleCount}
+          hasCount={session.hasCount}
+          pieces={session.pieces}
           tons={session.tons}
           onUndo={session.undo}
           onReset={session.reset}

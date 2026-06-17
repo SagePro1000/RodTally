@@ -1,4 +1,4 @@
-export default function ConfirmDialog({ open, onConfirm, onCancel, bundleCount, tons }) {
+export default function ConfirmDialog({ open, onConfirm, onCancel, pieces, tons }) {
   if (!open) return null;
 
   return (
@@ -6,7 +6,7 @@ export default function ConfirmDialog({ open, onConfirm, onCancel, bundleCount, 
       <div className="dialog-box">
         <div id="dialog-title" className="dialog-title">Save &amp; Reset?</div>
         <div className="dialog-body">
-          This will save the current session ({bundleCount} bundle{bundleCount !== 1 ? 's' : ''} · {tons} t) to history and clear the tally board. This cannot be undone.
+          This will save the current session ({pieces} pcs · {tons} t) to history and clear the tally board. This cannot be undone.
         </div>
         <div className="dialog-actions">
           <button
