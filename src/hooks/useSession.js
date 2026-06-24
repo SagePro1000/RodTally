@@ -11,6 +11,7 @@ const DEFAULTS = {
   countMode: 'free',
   targetType: 'tons',
   targetValue: 1,
+  bundleSize16: 5,
 };
 
 function loadSession() {
@@ -46,6 +47,7 @@ function loadSession() {
         typeof data.targetValue === 'number' && data.targetValue > 0
           ? data.targetValue
           : DEFAULTS.targetValue,
+      bundleSize16: data.bundleSize16 === 6 ? 6 : 5,
     };
   } catch {
     return DEFAULTS;
@@ -60,8 +62,13 @@ function saveSession(session) {
   }
 }
 
-function targetPiecesFor(material, saleType, targetValue) {
-  return Math.round(targetValue * material.pcsPerTon[saleType]);
+function targetPiecesFor(material, saleType, targetValue, bundleSize16Override) {
+  const pcsPerBundle = bundleSize16Override != null ? bundleSize16Override : material.pcsPerBundle;
+  // Recalculate pcsPerTon based on override bundle size for 16mm
+  const pcsPerTon = bundleSize16Override != null
+    ? Math.round((material.pcsPerTon[saleType] / material.pcsPerBundle) * bundleSize16Override)
+    : material.pcsPerTon[saleType];
+  return Math.round(targetValue * pcsPerTon);
 }
 
 export function useSession(addSession) {
@@ -73,14 +80,20 @@ export function useSession(addSession) {
   const [countMode, setCountMode] = useState(initial.countMode);
   const [targetType, setTargetType] = useState(initial.targetType);
   const [targetValue, setTargetValue] = useState(initial.targetValue);
+  const [bundleSize16, setBundleSize16] = useState(initial.bundleSize16);
 
   const material = MATERIALS[selectedMaterial];
+
+  // Effective bundle size: override only for 16mm in set-target tons mode
+  const use16mmOverride = selectedMaterial === '16mm' && countMode === 'target' && targetType === 'tons';
+  const effectiveBundleSize = use16mmOverride ? bundleSize16 : material.pcsPerBundle;
+
   const pieces = pieceCount;
-  const fullBundles = Math.floor(pieceCount / material.pcsPerBundle);
-  const partialPieces = pieceCount % material.pcsPerBundle;
-  
-  const targetPieces = countMode === 'target' && targetType === 'tons' 
-    ? targetPiecesFor(material, saleType, targetValue) 
+  const fullBundles = Math.floor(pieceCount / effectiveBundleSize);
+  const partialPieces = pieceCount % effectiveBundleSize;
+
+  const targetPieces = countMode === 'target' && targetType === 'tons'
+    ? targetPiecesFor(material, saleType, targetValue, use16mmOverride ? bundleSize16 : null)
     : 0;
 
   let displayTons = (pieces / material.pcsPerTon[saleType]).toFixed(2);
@@ -96,7 +109,7 @@ export function useSession(addSession) {
     countMode === 'target' &&
     (targetType === 'pieces'
       ? pieces >= targetValue
-      : pieces >= targetPiecesFor(material, saleType, targetValue));
+      : pieces >= targetPiecesFor(material, saleType, targetValue, use16mmOverride ? bundleSize16 : null));
 
   useEffect(() => {
     saveSession({
@@ -107,20 +120,21 @@ export function useSession(addSession) {
       countMode,
       targetType,
       targetValue,
+      bundleSize16,
     });
-  }, [selectedMaterial, saleType, pieceCount, incrementHistory, countMode, targetType, targetValue]);
+  }, [selectedMaterial, saleType, pieceCount, incrementHistory, countMode, targetType, targetValue, bundleSize16]);
 
   function count(unit = 'bundle') {
     if (targetReached) return;
 
     const effectiveUnit = countingPieces ? 'piece' : unit;
-    let increment = effectiveUnit === 'piece' ? 1 : material.pcsPerBundle;
+    let increment = effectiveUnit === 'piece' ? 1 : effectiveBundleSize;
 
     if (countMode === 'target') {
-      const targetPcs = targetType === 'pieces' 
-        ? targetValue 
-        : targetPiecesFor(material, saleType, targetValue);
-      
+      const targetPcs = targetType === 'pieces'
+        ? targetValue
+        : targetPiecesFor(material, saleType, targetValue, use16mmOverride ? bundleSize16 : null);
+
       const remaining = targetPcs - pieceCount;
       increment = Math.min(increment, remaining);
     }
@@ -174,6 +188,8 @@ export function useSession(addSession) {
     setTargetType,
     targetValue,
     setTargetValue,
+    bundleSize16,
+    setBundleSize16,
     targetReached,
     countBundle: count,
     undo,

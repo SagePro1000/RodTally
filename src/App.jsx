@@ -47,6 +47,9 @@ export default function App() {
             type={session.targetType}
             onValueChange={session.setTargetValue}
             onTypeChange={session.setTargetType}
+            selectedMaterial={session.selectedMaterial}
+            bundleSize16={session.bundleSize16}
+            onBundleSize16Change={session.setBundleSize16}
           />
         )}
 
@@ -82,23 +85,6 @@ export default function App() {
           countingPieces={session.countingPieces}
         />
 
-        {/* Action Zone */}
-        <ActionButton
-          onCount={session.countBundle}
-          reached={session.targetReached}
-          countingPieces={session.countingPieces}
-          bundleOnly={session.bundleOnly}
-        />
-
-        {/* Control Zone */}
-        <ControlButtons
-          hasCount={session.hasCount}
-          pieces={session.pieces}
-          tons={session.tons}
-          onUndo={session.undo}
-          onReset={session.reset}
-        />
-
         <hr className="section-divider" />
 
         {/* Reference Zone */}
@@ -111,6 +97,23 @@ export default function App() {
 
         {/* History Zone */}
         <HistoryLog history={history} />
+      </div>
+
+      {/* Fixed bottom action bar */}
+      <div className="fixed-action-bar">
+        <ActionButton
+          onCount={session.countBundle}
+          reached={session.targetReached}
+          countingPieces={session.countingPieces}
+          bundleOnly={session.bundleOnly}
+        />
+        <ControlButtons
+          hasCount={session.hasCount}
+          pieces={session.pieces}
+          tons={session.tons}
+          onUndo={session.undo}
+          onReset={session.reset}
+        />
       </div>
     </div>
   );

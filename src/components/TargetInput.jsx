@@ -1,4 +1,6 @@
-export default function TargetInput({ value, type, onValueChange, onTypeChange }) {
+export default function TargetInput({ value, type, onValueChange, onTypeChange, selectedMaterial, bundleSize16, onBundleSize16Change }) {
+  const show16mmToggle = selectedMaterial === '16mm' && type === 'tons';
+
   return (
     <div className="target-input-wrap">
       <div className="input-box">
@@ -34,6 +36,28 @@ export default function TargetInput({ value, type, onValueChange, onTypeChange }
           </button>
         </div>
       </div>
+
+      {show16mmToggle && (
+        <div className="input-box bundle-size-box">
+          <span className="setup-label">16mm Bundle</span>
+          <div className="unit-toggle" role="group" aria-label="Bundle size for 16mm">
+            <button
+              className={`unit-btn${bundleSize16 === 5 ? ' active' : ''}`}
+              onClick={() => onBundleSize16Change(5)}
+              aria-pressed={bundleSize16 === 5}
+            >
+              5 pcs
+            </button>
+            <button
+              className={`unit-btn${bundleSize16 === 6 ? ' active' : ''}`}
+              onClick={() => onBundleSize16Change(6)}
+              aria-pressed={bundleSize16 === 6}
+            >
+              6 pcs
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
