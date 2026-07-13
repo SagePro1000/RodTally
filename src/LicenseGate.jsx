@@ -30,6 +30,10 @@ export default function LicenseGate({ children }) {
         });
         if (res.ok) {
           data = await res.json();
+        } else {
+          // Treat non-OK responses as failures so the client falls back to
+          // a direct Supabase REST query (useful for static deployments).
+          throw new Error('validate-license endpoint not available');
         }
       } catch (apiErr) {
         // Fallback: Query Supabase REST API directly from client if keys are available (e.g. local Vite dev server)
