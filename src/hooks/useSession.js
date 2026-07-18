@@ -140,6 +140,12 @@ export function useSession(addSession) {
     }
 
     if (increment <= 0) return;
+
+    // Tactical haptic feedback for workers out in the field (30ms short vibe)
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(30);
+    }
+
     setPieceCount((prev) => prev + increment);
     setIncrementHistory((prev) => [...prev, increment]);
   }

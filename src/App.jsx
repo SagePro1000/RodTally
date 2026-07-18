@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import './index.css';
 import { useSession } from './hooks/useSession';
 import { useHistory } from './hooks/useHistory';
@@ -16,6 +17,29 @@ import HistoryLog from './components/HistoryLog';
 export default function App() {
   const { history, addSession } = useHistory();
   const session = useSession(addSession);
+
+  // Background fetch to update materials configuration from database
+  useEffect(() => {
+    async function updateMaterialsCache() {
+      try {
+        const res = await fetch('/api/get-materials');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.materials) {
+            const cached = localStorage.getItem('rodtally_materials_cache');
+            const newStr = JSON.stringify(data.materials);
+            if (cached !== newStr) {
+              localStorage.setItem('rodtally_materials_cache', newStr);
+              console.log('[Materials Cache] Cached updated materials config from database.');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Materials Cache] Offline or failed to sync fresh materials:', err);
+      }
+    }
+    updateMaterialsCache();
+  }, []);
 
   return (
     <div id="app-root">

@@ -67,6 +67,49 @@ export default function HistoryLog({ history }) {
   const dayGroups = useMemo(() => groupByDay(history ?? []), [history]);
   const [selectedDay, setSelectedDay] = useState(null);
   const activeDay = dayGroups.find((g) => g.key === selectedDay) ?? dayGroups[0];
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    if (!activeDay) return;
+
+    const reportText = [
+      `RodTally Report – ${activeDay.label}`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+      `----------------------------------------`,
+      ...activeDay.entries.map((entry) => {
+        const bundlesText = entry.partialPieces > 0
+          ? `${entry.bundles} bdl + ${entry.partialPieces} pcs`
+          : `${entry.bundles} bdl`;
+        const typeText = entry.saleType === 'wholesale' ? 'Wholesale' : 'Retail';
+        const targetText = entry.targetReached !== undefined
+          ? ` (${entry.targetReached ? 'Target Met ✓' : 'Target Missed ✗'})`
+          : '';
+        return `• ${entry.material} | ${typeText} | ${bundlesText} (${entry.pieces} pcs) | ${entry.tons}t${targetText}`;
+      }),
+      `----------------------------------------`,
+      `Total Sessions: ${activeDay.entries.length}`
+    ].join('\n');
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `RodTally Report – ${activeDay.label}`,
+          text: reportText,
+        });
+      } catch (err) {
+        // user cancelled or failed to share
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(reportText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        alert('Could not copy report to clipboard.');
+      }
+    }
+  };
 
   if (!history || history.length === 0) {
     return (
@@ -85,18 +128,38 @@ export default function HistoryLog({ history }) {
         <label className="setup-label" htmlFor="history-day-select">
           Select day
         </label>
-        <select
-          id="history-day-select"
-          className="setup-select"
-          value={activeDay?.key ?? ''}
-          onChange={(e) => setSelectedDay(e.target.value)}
-        >
-          {dayGroups.map((group) => (
-            <option key={group.key} value={group.key}>
-              {group.label} ({group.entries.length})
-            </option>
-          ))}
-        </select>
+        <div className="history-share-row">
+          <select
+            id="history-day-select"
+            className="setup-select"
+            value={activeDay?.key ?? ''}
+            onChange={(e) => setSelectedDay(e.target.value)}
+            style={{ flex: 1 }}
+          >
+            {dayGroups.map((group) => (
+              <option key={group.key} value={group.key}>
+                {group.label} ({group.entries.length})
+              </option>
+            ))}
+          </select>
+          {activeDay && (
+            <button
+              onClick={handleShare}
+              className="ctrl-btn share-btn"
+              title="Share report to WhatsApp or email"
+              aria-label="Share day report"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+              {copied ? 'Copied!' : 'Share'}
+            </button>
+          )}
+        </div>
         {activeDay && (
           <p className="history-day-summary">
             {activeDay.entries.length} calculation{activeDay.entries.length !== 1 ? 's' : ''} on
